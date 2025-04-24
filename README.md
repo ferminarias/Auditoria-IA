@@ -16,16 +16,7 @@ git clone <url-del-repositorio>
 cd <nombre-del-repositorio>
 ```
 
-2. Copiar el archivo de entorno:
-```bash
-cp .env.example .env
-```
-
-3. Editar el archivo `.env` con tus configuraciones:
-```bash
-# Editar las variables según sea necesario
-nano .env
-```
+2. Configurar las variables de entorno necesarias en tu sistema.
 
 ## Ejecución
 
@@ -52,7 +43,6 @@ docker-compose up --build
 ├── uploads/               # Carpeta de archivos de audio
 ├── docker/                # Archivos de configuración de Docker
 ├── fastapi-app/           # Carpeta para futuras expansiones
-├── .env.example           # Variables de entorno de ejemplo
 ├── docker-compose.yml     # Configuración de Docker Compose
 └── README.md             # Este archivo
 ```
