@@ -1,28 +1,30 @@
+version: "3.8"
+
 services:
-  web:
-    build: .
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    env_file:
+      - .env
     ports:
-      - "8001:8000"
+      - "8000:8000"
     volumes:
-      - ./fastapi-app/main.py:/app/main.py
+      - ./app:/app
       - ./uploads:/app/uploads
       - ./analysis:/app/analysis
-    environment:
-      - DATABASE_URL=postgresql://postgres:Nods2025!@db:5432/auditoria_ia
     depends_on:
       - db
 
   db:
     image: postgres:13
+    env_file:
+      - .env
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    environment:
-      - POSTGRES_DB=auditoria_ia
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=Nods2025!
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
 
 volumes:
-  postgres_data:
+  postgres-data:
