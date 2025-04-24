@@ -11,14 +11,20 @@ Este proyecto es una aplicación FastAPI que permite transcribir y analizar arch
 - Resumen automático
 - Análisis de tono
 - API RESTful
+<<<<<<< HEAD
 - Base de datos PostgreSQL
 - Sistema de autenticación
 - Gestión de clientes y usuarios
+=======
+>>>>>>> ea75b391a6cfa88ac04af222aeba605a0bf13dc8
 
 ## Requisitos
 
 - Python 3.8+
+<<<<<<< HEAD
 - PostgreSQL 12+
+=======
+>>>>>>> ea75b391a6cfa88ac04af222aeba605a0bf13dc8
 - FastAPI
 - Faster Whisper
 - Transformers
@@ -43,6 +49,7 @@ source venv/bin/activate  # En Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+<<<<<<< HEAD
 4. Configurar variables de entorno:
    - Crear un archivo `.env` en la raíz del proyecto
    - Copiar el siguiente contenido y ajustar según sea necesario:
@@ -72,6 +79,8 @@ pip install -r requirements.txt
    alembic upgrade head
    ```
 
+=======
+>>>>>>> ea75b391a6cfa88ac04af222aeba605a0bf13dc8
 ## Uso
 
 1. Iniciar el servidor:
@@ -88,23 +97,31 @@ http://localhost:8000
 
 - `POST /api/transcribe/`: Transcribe un archivo de audio
 - `POST /api/analyze/`: Analiza el texto transcrito
+<<<<<<< HEAD
 - `POST /api/auth/login`: Iniciar sesión
 - `POST /api/auth/register`: Registrar nuevo usuario
 - `GET /api/clientes/`: Listar clientes
 - `POST /api/clientes/`: Crear cliente
 - `GET /api/usuarios/`: Listar usuarios
 - `POST /api/usuarios/`: Crear usuario
+=======
+>>>>>>> ea75b391a6cfa88ac04af222aeba605a0bf13dc8
 
 ## Estructura del Proyecto
 
 ```
 fastapi-app/
+<<<<<<< HEAD
 ├── app/
 │   ├── models/          # Modelos de la base de datos
 │   ├── schemas/         # Esquemas Pydantic
 │   ├── database.py      # Configuración de la base de datos
 │   └── main.py          # Aplicación principal
 ├── alembic/             # Migraciones de la base de datos
+=======
+├── main.py              # Aplicación principal
+├── requirements.txt     # Dependencias
+>>>>>>> ea75b391a6cfa88ac04af222aeba605a0bf13dc8
 ├── static/             # Archivos estáticos
 ├── uploads/            # Directorio para archivos subidos
 └── analysis/           # Directorio para análisis guardados
