@@ -1,42 +1,28 @@
-
 services:
-  n8n:
-    image: n8nio/n8n
+  web:
+    build: .
     ports:
-      - "5678:5678"
-    environment:
-      - N8N_BASIC_AUTH_ACTIVE=false
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE=n8n
-      - DB_POSTGRESDB_USER=n8n
-      - DB_POSTGRESDB_PASSWORD=n8npass
-      - GENERIC_TIMEZONE=America/Argentina/Buenos_Aires
+      - "8001:8000"
     volumes:
-      - n8n-data:/home/node/.n8n
+      - ./fastapi-app/main.py:/app/main.py
+      - ./uploads:/app/uploads
+      - ./analysis:/app/analysis
+    environment:
+      - DATABASE_URL=postgresql://postgres:Nods2025!@db:5432/auditoria_ia
     depends_on:
-      - postgres
+      - db
 
-  postgres:
-    image: postgres:15
-    restart: always
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
-      POSTGRES_USER: n8n
-      POSTGRES_PASSWORD: n8npass
-      POSTGRES_DB: n8n
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-
-  fastapi:
-    build: ./fastapi-app
+      - POSTGRES_DB=auditoria_ia
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Nods2025!
     ports:
-      - "8000:8000"
-    volumes:
-      - ./fastapi-app/uploads:/app/uploads
-      - ./fastapi-app/analysis:/app/analysis
-    restart: always
+      - "5432:5432"
 
 volumes:
-  n8n-data:
-  postgres-data:
+  postgres_data:

@@ -1,3 +1,6 @@
+// Configuración
+const API_URL = 'http://localhost:8000';
+
 // Elementos del DOM
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
@@ -12,50 +15,66 @@ const jsonResult = document.getElementById('json-result');
 // Variables globales
 let currentAnalysis = null;
 
-// Event Listeners
-dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.classList.add('bg-gray-50');
+// Verificar autenticación al cargar la página
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+    setupEventListeners();
 });
 
-dropZone.addEventListener('dragleave', () => {
-    dropZone.classList.remove('bg-gray-50');
-});
+// Configurar event listeners
+function setupEventListeners() {
+    const logoutBtn = document.getElementById('logoutBtn');
 
-dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('bg-gray-50');
-    const file = e.dataTransfer.files[0];
-    handleFile(file);
-});
+    // Event listeners para drag & drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('border-blue-500');
+    });
 
-fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    handleFile(file);
-});
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('border-blue-500');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-blue-500');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFile(files[0]);
+        }
+    });
+
+    // Event listener para selección de archivo
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    // Event listener para logout
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            removeToken();
+            window.location.href = 'login.html';
+        });
+    }
+}
 
 // Funciones
 async function handleFile(file) {
-    if (!file) return;
-
-    // Validar tipo de archivo
-    const validTypes = ['audio/mp3', 'audio/mpeg', 'audio/m4a', 'audio/wav'];
-    if (!validTypes.includes(file.type)) {
-        alert('Por favor, selecciona un archivo de audio válido (MP3, M4A o WAV)');
-        return;
-    }
-
-    // Mostrar indicador de carga
-    dropZone.innerHTML = `
-        <i class="fas fa-spinner fa-spin text-4xl text-blue-500 mb-4"></i>
-        <p class="text-gray-600">Procesando archivo...</p>
-    `;
-
     try {
-        // Transcribir audio
+        // Validar tipo de archivo
+        if (!file.type.startsWith('audio/')) {
+            throw new Error('Por favor, selecciona un archivo de audio válido');
+        }
+
+        // Mostrar indicador de carga
+        showLoading();
+
+        // Transcribir el audio
         const transcription = await transcribeAudio(file);
         
-        // Analizar texto
+        // Analizar la transcripción
         const analysis = await analyzeText(transcription, file.name);
         
         // Mostrar resultados
@@ -63,28 +82,24 @@ async function handleFile(file) {
         
         // Guardar análisis actual
         currentAnalysis = analysis;
+        
+        // Ocultar indicador de carga
+        hideLoading();
     } catch (error) {
-        console.error('Error:', error);
-        alert('Error al procesar el archivo. Por favor, intenta de nuevo.');
+        hideLoading();
+        showError(error.message);
     }
-
-    // Restaurar drop zone
-    dropZone.innerHTML = `
-        <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
-        <p class="text-gray-600">Arrastra tu archivo de audio aquí o</p>
-        <label class="mt-2 inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer">
-            Selecciona un archivo
-            <input type="file" id="file-input" class="hidden" accept=".mp3,.m4a,.wav">
-        </label>
-    `;
 }
 
 async function transcribeAudio(file) {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('http://localhost:8000/transcribe/', {
+    const response = await fetch(`${API_URL}/api/transcribe/`, {
         method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${getToken()}`
+        },
         body: formData
     });
 
@@ -97,10 +112,11 @@ async function transcribeAudio(file) {
 }
 
 async function analyzeText(text, filename) {
-    const response = await fetch('http://localhost:8000/analyze/', {
+    const response = await fetch(`${API_URL}/api/analyze/`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`
         },
         body: JSON.stringify({
             text: text,
@@ -112,31 +128,36 @@ async function analyzeText(text, filename) {
         throw new Error('Error en el análisis');
     }
 
-    const data = await response.json();
-    return data.analysis;
+    return await response.json();
 }
 
-function displayResults(analysis) {
+function displayResults(data) {
     // Mostrar sección de resultados
     results.classList.remove('hidden');
 
     // Actualizar resumen
-    callSummary.textContent = analysis.call_summary;
+    callSummary.textContent = data.analysis.summary;
 
     // Actualizar satisfacción
-    satisfaction.textContent = `Nivel: ${analysis.satisfaction} (${(analysis.confidence * 100).toFixed(1)}% de confianza)`;
+    satisfaction.textContent = 
+        `Nivel de satisfacción: ${data.analysis.detailed_analysis.satisfaction}`;
 
     // Actualizar categoría
-    category.textContent = `Tipo: ${analysis.call_categorization.type} - Tema: ${analysis.call_categorization.topic}`;
+    category.textContent = 
+        `Categoría: ${data.analysis.detailed_analysis.emotion_analysis.dominant_emotion}`;
 
     // Actualizar emociones
-    emotions.textContent = `Cliente: ${analysis.emotional_analysis.customer_emotion} - Agente: ${analysis.emotional_analysis.agent_emotion}`;
+    emotions.textContent = 
+        `Emociones: ${Object.entries(data.analysis.detailed_analysis.emotion_analysis.emotion_scores)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join(', ')}`;
 
     // Actualizar resolución
-    resolution.textContent = `Estado: ${analysis.resolution_tracking.status} - Seguimiento: ${analysis.resolution_tracking.follow_up_required ? 'Requerido' : 'No requerido'}`;
+    resolution.textContent = 
+        `Estado: ${data.analysis.detailed_analysis.resolution_status}`;
 
     // Mostrar JSON completo
-    jsonResult.textContent = JSON.stringify(analysis, null, 2);
+    jsonResult.textContent = JSON.stringify(data.analysis, null, 2);
 }
 
 function downloadJSON() {
@@ -192,4 +213,17 @@ function downloadPDF() {
 
     // Guardar PDF
     doc.save(`analisis_${new Date().toISOString()}.pdf`);
+}
+
+// Funciones de utilidad
+function showLoading() {
+    // Implementar indicador de carga
+}
+
+function hideLoading() {
+    // Ocultar indicador de carga
+}
+
+function showError(message) {
+    alert(message); // En producción, usar un sistema de notificaciones más elegante
 } 

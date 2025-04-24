@@ -1,4 +1,12 @@
-from fastapi import FastAPI, UploadFile, File, Body, HTTPException
+from fastapi import FastAPI, UploadFile, File, Body, HTTPException, Depends, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from datetime import datetime, timedelta
+from typing import Optional
+from pydantic import BaseModel
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from faster_whisper import WhisperModel
 from pydub import AudioSegment
 from transformers import pipeline
@@ -7,11 +15,141 @@ from fastapi.middleware.cors import CORSMiddleware
 import traceback
 import os
 import json
-from datetime import datetime
-import tempfile
 from pathlib import Path
-import shutil
 from fastapi.responses import FileResponse
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv()
+
+# Configuración de la base de datos
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/auditoria_ia")
+
+# Configuración de JWT
+SECRET_KEY = os.getenv("SECRET_KEY", "tu_clave_secreta_muy_segura")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Configuración de seguridad
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+# Modelos Pydantic
+class User(BaseModel):
+    email: str
+    nombre: str
+    rol: str
+
+class UserInDB(User):
+    password_hash: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
+
+# Funciones de utilidad
+def get_db():
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def get_user(conn, email: str):
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM auditoria_ia.usuarios WHERE email = %s", (email,))
+    user = cur.fetchone()
+    cur.close()
+    return user
+
+def authenticate_user(conn, email: str, password: str):
+    user = get_user(conn, email)
+    if not user:
+        return False
+    if not verify_password(password, user["password_hash"]):
+        return False
+    return user
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def get_current_user(token: str = Depends(oauth2_scheme), conn = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Credenciales inválidas",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+        token_data = TokenData(email=email)
+    except JWTError:
+        raise credentials_exception
+    user = get_user(conn, email=token_data.email)
+    if user is None:
+        raise credentials_exception
+    return user
+
+# Endpoints de autenticación
+@app.post("/token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), conn = Depends(get_db)):
+    user = authenticate_user(conn, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email o contraseña incorrectos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user["email"]}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/register")
+async def register_user(email: str, password: str, nombre: str, rol: str, conn = Depends(get_db)):
+    # Verificar si el usuario ya existe
+    if get_user(conn, email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El email ya está registrado"
+        )
+    
+    # Crear nuevo usuario
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "INSERT INTO auditoria_ia.usuarios (email, password_hash, nombre, rol) VALUES (%s, %s, %s, %s) RETURNING id",
+            (email, get_password_hash(password), nombre, rol)
+        )
+        conn.commit()
+        return {"message": "Usuario registrado exitosamente"}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+    finally:
+        cur.close()
 
 app = FastAPI()
 
@@ -64,7 +202,10 @@ def validate_audio_file(file: UploadFile) -> bool:
     return True
 
 @app.post("/api/transcribe/")
-async def transcribe(file: UploadFile = File(...)):
+async def transcribe(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
     try:
         if not validate_audio_file(file):
             raise HTTPException(status_code=400, detail="Tipo de archivo no soportado")
@@ -105,7 +246,11 @@ async def transcribe(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/analyze/")
-async def analyze(text: str = Body(...), filename: str = Body(...)):
+async def analyze(
+    text: str = Body(...),
+    filename: str = Body(...),
+    current_user: dict = Depends(get_current_user)
+):
     try:
         if not text:
             raise HTTPException(status_code=400, detail="El texto no puede estar vacío")
