@@ -13,7 +13,7 @@ from pathlib import Path
 import shutil
 from fastapi.responses import FileResponse
 
-app = FastAPI()
+app = FastAPI(title="FastAPI App")
 
 # Configurar CORS
 app.add_middleware(
@@ -217,3 +217,7 @@ async def serve_frontend(full_path: str):
         return FileResponse(static_dir / "index.html")
         
     return FileResponse(requested_path)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

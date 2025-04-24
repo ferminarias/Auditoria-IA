@@ -1,30 +1,30 @@
-version: "3.8"
+version: '3.8'
 
 services:
-  backend:
+  app:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    env_file:
-      - .env
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
-      - ./app:/app
       - ./uploads:/app/uploads
       - ./analysis:/app/analysis
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/auditoria_ia
     depends_on:
       - db
 
   db:
     image: postgres:13
-    env_file:
-      - .env
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=auditoria_ia
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
 volumes:
-  postgres-data:
+  postgres_data:

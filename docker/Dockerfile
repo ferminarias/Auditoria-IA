@@ -1,49 +1,76 @@
-# Etapa 1: Construir el frontend
-FROM node:18 AS frontend-builder
+# Stage 1: Build the frontend
+FROM node:18-slim AS frontend-builder
 
 WORKDIR /frontend
 COPY frontend/package*.json ./
-RUN npm install
 
-COPY frontend/ .
-RUN npm run build && ls -la dist/
+# Instalar dependencias con --platform=linux
+RUN --mount=type=cache,target=/root/.npm npm ci --platform=linux --arch=x64
 
-# Etapa 2: Construir el backend
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 2: Build the backend
 FROM python:3.10-slim AS backend
+
+# Create non-root user
+RUN useradd -m -u 1000 appuser
 
 WORKDIR /app
 
-# Instalar dependencias del sistema
+# Install system dependencies securely
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ffmpeg \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    curl \
+    libpq-dev \
+    gcc \
+    python3-dev \
+    git && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    chown -R appuser:appuser /app
 
-# Copiar y instalar dependencias de Python
-COPY app/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy and install Python dependencies
+COPY --chown=appuser:appuser app/requirements.txt ./
+RUN --mount=type=cache,target=/root/.cache/pip pip install --no-cache-dir -r requirements.txt && \
+    rm -rf /root/.cache/pip
 
-# Copiar archivos del backend
-COPY app/main.py .
-COPY app/test_transcribe_and_analyze.py .
+# Copy backend files
+COPY --chown=appuser:appuser app/main.py ./
+COPY --chown=appuser:appuser app/test_transcribe_and_analyze.py ./
+COPY --chown=appuser:appuser app/database.py ./
+COPY --chown=appuser:appuser app/models/ ./models/
 
-# Crear directorios necesarios
-RUN mkdir -p /app/uploads /app/analysis /app/static
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/uploads /app/analysis /app/static /app/cache && \
+    chown -R appuser:appuser /app/uploads /app/analysis /app/static /app/cache && \
+    chmod -R 750 /app/uploads /app/analysis /app/static /app/cache
 
-# Copiar el frontend construido
-COPY --from=frontend-builder /frontend/dist/. /app/static/
-RUN ls -la /app/static/
+# Copy the built frontend
+COPY --from=frontend-builder --chown=appuser:appuser /frontend/dist/. /app/static/
 
-# Configurar volúmenes
-VOLUME ["/app/uploads", "/app/analysis"]
+# Configure volumes
+VOLUME ["/app/uploads", "/app/analysis", "/app/cache"]
 
-# Variables de entorno
-ENV PYTHONUNBUFFERED=1
-ENV MODEL_PATH=/app/models
+# Environment variables
+ENV PYTHONUNBUFFERED=1 \
+    MODEL_PATH=/app/models \
+    PORT=8000 \
+    DATABASE_URL=postgresql://postgres:postgres@db:5432/auditoria_ia \
+    TRANSFORMERS_CACHE=/app/cache \
+    HF_HOME=/app/cache \
+    HF_DATASETS_CACHE=/app/cache
 
-# Exponer puerto
-EXPOSE 8000
+# Expose port
+EXPOSE ${PORT}
 
-# Comando para ejecutar la aplicación
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Switch to non-root user
+USER appuser
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/ || exit 1
+
+# Command to run the application
+CMD uvicorn main:app --host 0.0.0.0 --port $PORT --reload
