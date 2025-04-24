@@ -42,10 +42,16 @@ docker-compose up --build
 
 ```
 /
-├── app/                    # Código fuente (FastAPI)
+├── app/                    # Código fuente principal (FastAPI)
+│   ├── main.py            # Punto de entrada de la aplicación
+│   ├── database.py        # Configuración de la base de datos
+│   ├── requirements.txt   # Dependencias de Python
+│   └── models/            # Modelos de datos
 ├── frontend/              # Frontend (React)
+├── analysis/              # Scripts y herramientas de análisis
 ├── uploads/               # Carpeta de archivos de audio
 ├── docker/                # Archivos de configuración de Docker
+├── fastapi-app/           # Carpeta para futuras expansiones
 ├── .env.example           # Variables de entorno de ejemplo
 ├── docker-compose.yml     # Configuración de Docker Compose
 └── README.md             # Este archivo
