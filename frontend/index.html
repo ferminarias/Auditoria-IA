@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Llamadas</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .drop-zone {
+            border: 2px dashed #4a5568;
+            transition: all 0.3s ease;
+        }
+        .drop-zone:hover {
+            border-color: #2d3748;
+            background-color: #f7fafc;
+        }
+        .result-box {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">
+            <i class="fas fa-phone-alt mr-2"></i>
+            Análisis de Llamadas
+        </h1>
+
+        <!-- Área de carga de archivos -->
+        <div class="max-w-2xl mx-auto mb-8">
+            <div id="drop-zone" class="drop-zone rounded-lg p-8 text-center cursor-pointer">
+                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                <p class="text-gray-600">Arrastra tu archivo de audio aquí o</p>
+                <label class="mt-2 inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer">
+                    Selecciona un archivo
+                    <input type="file" id="file-input" class="hidden" accept=".mp3,.m4a,.wav">
+                </label>
+            </div>
+        </div>
+
+        <!-- Área de resultados -->
+        <div id="results" class="max-w-4xl mx-auto hidden">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fas fa-chart-bar mr-2"></i>
+                    Resultados del Análisis
+                </h2>
+                
+                <!-- Resumen -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-medium mb-2 text-gray-700">Resumen de la Llamada</h3>
+                    <p id="call-summary" class="text-gray-600"></p>
+                </div>
+
+                <!-- Análisis Detallado -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Satisfacción -->
+                    <div class="bg-gray-50 p-4 rounded">
+                        <h4 class="font-medium mb-2 text-gray-700">Satisfacción</h4>
+                        <p id="satisfaction" class="text-gray-600"></p>
+                    </div>
+                    
+                    <!-- Categoría -->
+                    <div class="bg-gray-50 p-4 rounded">
+                        <h4 class="font-medium mb-2 text-gray-700">Categoría</h4>
+                        <p id="category" class="text-gray-600"></p>
+                    </div>
+                    
+                    <!-- Emociones -->
+                    <div class="bg-gray-50 p-4 rounded">
+                        <h4 class="font-medium mb-2 text-gray-700">Análisis Emocional</h4>
+                        <p id="emotions" class="text-gray-600"></p>
+                    </div>
+                    
+                    <!-- Resolución -->
+                    <div class="bg-gray-50 p-4 rounded">
+                        <h4 class="font-medium mb-2 text-gray-700">Estado de Resolución</h4>
+                        <p id="resolution" class="text-gray-600"></p>
+                    </div>
+                </div>
+
+                <!-- JSON Completo -->
+                <div class="mt-6">
+                    <h3 class="text-lg font-medium mb-2 text-gray-700">Análisis Completo</h3>
+                    <div class="result-box bg-gray-50 p-4 rounded">
+                        <pre id="json-result" class="text-sm text-gray-600"></pre>
+                    </div>
+                </div>
+
+                <!-- Botones de descarga -->
+                <div class="mt-6 flex justify-center space-x-4">
+                    <button onclick="downloadJSON()" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+                        <i class="fas fa-file-code mr-2"></i>
+                        Descargar JSON
+                    </button>
+                    <button onclick="downloadPDF()" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+                        <i class="fas fa-file-pdf mr-2"></i>
+                        Descargar PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html> 
