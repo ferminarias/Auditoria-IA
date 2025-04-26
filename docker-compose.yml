@@ -10,6 +10,8 @@ services:
     volumes:
       - ./uploads:/app/uploads
       - ./analysis:/app/analysis
+    env_file:
+      - .env  
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/auditoria_ia
     depends_on:
@@ -24,7 +26,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
 
 volumes:
   postgres_data:

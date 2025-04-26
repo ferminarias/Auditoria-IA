@@ -66,6 +66,7 @@ const App: React.FC = () => {
       analysis: undefined,
       error: undefined
     }));
+    console.log(newFiles);
     setFiles(prev => [...prev, ...newFiles]);
   }, []);
 
@@ -86,7 +87,8 @@ const App: React.FC = () => {
             updated[fileIndex] = { ...file, status: 'analyzing', error: undefined };
             return updated;
           });
-
+          console.log({files});
+          console.log({file});
           try {
             // Paso 1: Transcribir el audio
             const formData = new FormData();
@@ -98,7 +100,7 @@ const App: React.FC = () => {
             });
             
             const transcriptionData = await transcriptionResponse.json();
-            
+            console.log({transcriptionData});
             if (transcriptionData.error) {
               throw new Error(transcriptionData.error);
             }
@@ -116,7 +118,7 @@ const App: React.FC = () => {
             });
 
             const analysisData = await analysisResponse.json();
-            
+            console.log({analysisData});
             if (analysisData.error) {
               throw new Error(analysisData.error);
             }
@@ -134,7 +136,8 @@ const App: React.FC = () => {
               return updated;
             });
           } catch (error) {
-            // Actualizar estado de error para este archivo
+            //  Actualizar estado de error para este archivo
+            console.log({error});
             setFiles(prev => {
               const updated = [...prev];
               updated[fileIndex] = {
@@ -444,17 +447,20 @@ const App: React.FC = () => {
                           <div className="flex justify-between items-center">
                             <span>Urgencia</span>
                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              files[activeTab].analysis?.urgency === 'ALTA' ? 'bg-red-100 text-red-800' :
-                              files[activeTab].analysis?.urgency === 'MEDIA' ? 'bg-yellow-100 text-yellow-800' :
+                              files[activeTab]?.analysis?.urgency === 'ALTA' ? 'bg-red-100 text-red-800' :
+                              files[activeTab]?.analysis?.urgency === 'MEDIA' ? 'bg-yellow-100 text-yellow-800' :
                               'bg-green-100 text-green-800'
                             }`}>
-                              {files[activeTab].analysis?.urgency}
+                              {files[activeTab]?.analysis?.urgency || 'BAJA'}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span>Confianza</span>
                             <span className="font-medium">
-                              {(files[activeTab].analysis?.confidence * 100).toFixed(1)}%
+                              {(() => {
+                                const confidence = files[activeTab]?.analysis?.confidence;
+                                return confidence !== undefined ? (confidence * 100).toFixed(1) : '0';
+                              })()}%
                             </span>
                           </div>
                         </div>
@@ -467,31 +473,31 @@ const App: React.FC = () => {
                           <div className="flex justify-between items-center">
                             <span>Profesionalismo</span>
                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              files[activeTab].analysis?.agent_analysis.professionalism === 'ALTO' ? 'bg-green-100 text-green-800' :
-                              files[activeTab].analysis?.agent_analysis.professionalism === 'MEDIO' ? 'bg-yellow-100 text-yellow-800' :
+                              files[activeTab]?.analysis?.agent_analysis?.professionalism === 'ALTO' ? 'bg-green-100 text-green-800' :
+                              files[activeTab]?.analysis?.agent_analysis?.professionalism === 'MEDIO' ? 'bg-yellow-100 text-yellow-800' :
                               'bg-red-100 text-red-800'
                             }`}>
-                              {files[activeTab].analysis?.agent_analysis.professionalism}
+                              {files[activeTab]?.analysis?.agent_analysis?.professionalism || 'BAJO'}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span>Empatía</span>
                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              files[activeTab].analysis?.agent_analysis.empathy === 'ALTO' ? 'bg-green-100 text-green-800' :
-                              files[activeTab].analysis?.agent_analysis.empathy === 'MEDIO' ? 'bg-yellow-100 text-yellow-800' :
+                              files[activeTab]?.analysis?.agent_analysis?.empathy === 'ALTO' ? 'bg-green-100 text-green-800' :
+                              files[activeTab]?.analysis?.agent_analysis?.empathy === 'MEDIO' ? 'bg-yellow-100 text-yellow-800' :
                               'bg-red-100 text-red-800'
                             }`}>
-                              {files[activeTab].analysis?.agent_analysis.empathy}
+                              {files[activeTab]?.analysis?.agent_analysis?.empathy || 'BAJO'}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span>Efectividad</span>
                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              files[activeTab].analysis?.agent_analysis.solution_effectiveness === 'EFECTIVA' ? 'bg-green-100 text-green-800' :
-                              files[activeTab].analysis?.agent_analysis.solution_effectiveness === 'PARCIAL' ? 'bg-yellow-100 text-yellow-800' :
+                              files[activeTab]?.analysis?.agent_analysis?.solution_effectiveness === 'EFECTIVA' ? 'bg-green-100 text-green-800' :
+                              files[activeTab]?.analysis?.agent_analysis?.solution_effectiveness === 'PARCIAL' ? 'bg-yellow-100 text-yellow-800' :
                               'bg-red-100 text-red-800'
                             }`}>
-                              {files[activeTab].analysis?.agent_analysis.solution_effectiveness}
+                              {files[activeTab]?.analysis?.agent_analysis?.solution_effectiveness || 'NO EFECTIVA'}
                             </span>
                           </div>
                         </div>
@@ -503,20 +509,20 @@ const App: React.FC = () => {
                         <div className="space-y-4">
                           <div className="flex justify-between items-center">
                             <span>Tipo</span>
-                            <span className="font-medium">{files[activeTab].analysis?.call_categorization.type}</span>
+                            <span className="font-medium">{files[activeTab]?.analysis?.call_categorization?.type || 'No especificado'}</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span>Tema</span>
-                            <span className="font-medium">{files[activeTab].analysis?.call_categorization.topic}</span>
+                            <span className="font-medium">{files[activeTab]?.analysis?.call_categorization?.topic || 'No especificado'}</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span>Prioridad</span>
                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              files[activeTab].analysis?.call_categorization.priority === 'ALTA' ? 'bg-red-100 text-red-800' :
-                              files[activeTab].analysis?.call_categorization.priority === 'MEDIA' ? 'bg-yellow-100 text-yellow-800' :
+                              files[activeTab]?.analysis?.call_categorization?.priority === 'ALTA' ? 'bg-red-100 text-red-800' :
+                              files[activeTab]?.analysis?.call_categorization?.priority === 'MEDIA' ? 'bg-yellow-100 text-yellow-800' :
                               'bg-green-100 text-green-800'
                             }`}>
-                              {files[activeTab].analysis?.call_categorization.priority}
+                              {files[activeTab]?.analysis?.call_categorization?.priority || 'BAJA'}
                             </span>
                           </div>
                         </div>
@@ -528,20 +534,20 @@ const App: React.FC = () => {
                         <div className="space-y-4">
                           <div className="flex justify-between items-center">
                             <span>Emoción del Cliente</span>
-                            <span className="font-medium">{files[activeTab].analysis?.emotional_analysis.customer_emotion}</span>
+                            <span className="font-medium">{files[activeTab]?.analysis?.emotional_analysis?.customer_emotion || 'No especificada'}</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span>Emoción del Agente</span>
-                            <span className="font-medium">{files[activeTab].analysis?.emotional_analysis.agent_emotion}</span>
+                            <span className="font-medium">{files[activeTab]?.analysis?.emotional_analysis?.agent_emotion || 'No especificada'}</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span>Calidad de Interacción</span>
                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              files[activeTab].analysis?.emotional_analysis.interaction_quality === 'POSITIVA' ? 'bg-green-100 text-green-800' :
-                              files[activeTab].analysis?.emotional_analysis.interaction_quality === 'NEUTRAL' ? 'bg-gray-100 text-gray-600' :
+                              files[activeTab]?.analysis?.emotional_analysis?.interaction_quality === 'POSITIVA' ? 'bg-green-100 text-green-800' :
+                              files[activeTab]?.analysis?.emotional_analysis?.interaction_quality === 'NEUTRAL' ? 'bg-gray-100 text-gray-600' :
                               'bg-red-100 text-red-800'
                             }`}>
-                              {files[activeTab].analysis?.emotional_analysis.interaction_quality}
+                              {files[activeTab]?.analysis?.emotional_analysis?.interaction_quality || 'NEGATIVA'}
                             </span>
                           </div>
                         </div>
@@ -554,33 +560,33 @@ const App: React.FC = () => {
                           <div className="flex justify-between items-center">
                             <span>Estado</span>
                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              files[activeTab].analysis?.resolution_tracking.status === 'COMPLETAMENTE RESUELTO' ? 'bg-green-100 text-green-800' :
-                              files[activeTab].analysis?.resolution_tracking.status === 'PARCIALMENTE RESUELTO' ? 'bg-yellow-100 text-yellow-800' :
+                              files[activeTab]?.analysis?.resolution_tracking?.status === 'COMPLETAMENTE RESUELTO' ? 'bg-green-100 text-green-800' :
+                              files[activeTab]?.analysis?.resolution_tracking?.status === 'PARCIALMENTE RESUELTO' ? 'bg-yellow-100 text-yellow-800' :
                               'bg-red-100 text-red-800'
                             }`}>
-                              {files[activeTab].analysis?.resolution_tracking.status}
+                              {files[activeTab]?.analysis?.resolution_tracking?.status || 'NO RESUELTO'}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span>Tiempo de Resolución</span>
-                            <span className="font-medium">{files[activeTab].analysis?.resolution_tracking.resolution_time}</span>
+                            <span className="font-medium">{files[activeTab]?.analysis?.resolution_tracking?.resolution_time || 'No especificado'}</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span>Requiere Seguimiento</span>
                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              files[activeTab].analysis?.resolution_tracking.follow_up_required ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                              files[activeTab]?.analysis?.resolution_tracking?.follow_up_required ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                             }`}>
-                              {files[activeTab].analysis?.resolution_tracking.follow_up_required ? 'Sí' : 'No'}
+                              {files[activeTab]?.analysis?.resolution_tracking?.follow_up_required ? 'Sí' : 'No'}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span>Nivel de Escalación</span>
                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              files[activeTab].analysis?.resolution_tracking.escalation_level === 0 ? 'bg-green-100 text-green-800' :
-                              files[activeTab].analysis?.resolution_tracking.escalation_level === 1 ? 'bg-yellow-100 text-yellow-800' :
+                              files[activeTab]?.analysis?.resolution_tracking?.escalation_level === 0 ? 'bg-green-100 text-green-800' :
+                              files[activeTab]?.analysis?.resolution_tracking?.escalation_level === 1 ? 'bg-yellow-100 text-yellow-800' :
                               'bg-red-100 text-red-800'
                             }`}>
-                              Nivel {files[activeTab].analysis?.resolution_tracking.escalation_level}
+                              Nivel {files[activeTab]?.analysis?.resolution_tracking?.escalation_level || 0}
                             </span>
                           </div>
                         </div>
