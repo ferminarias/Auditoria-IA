@@ -4,26 +4,27 @@ FROM node:18-slim AS frontend-builder
 WORKDIR /frontend
 COPY frontend/package*.json ./
 
-# Asegura que traiga devDependencies (typescript, vite, etc.)
-ENV NODE_ENV=development
+# Instalar dependencias
+RUN npm ci --platform=linux --arch=x64
 
-# Instala TODO (prod + dev) y herramientas de desarrollo globalmente
-RUN npm ci && \
-    npm install -g typescript@5.2.2 vite@latest
-
+# Copiar archivos del frontend
 COPY frontend/ ./
 
-RUN npm run build   # ahora tsc y vite estarán disponibles
+# Instalar dependencias de desarrollo y construir
+RUN npm install && \
+    chmod -R 777 /frontend && \
+    npx tsc && \
+    npx vite build
 
 # Stage 2: Build the backend
-FROM python:3.10-slim AS backend-builder
+FROM python:3.10-slim AS backend
 
-# Create a non-root user
+# Create non-root user
 RUN useradd -m -u 1000 appuser
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies securely
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ffmpeg \
@@ -36,25 +37,26 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     chown -R appuser:appuser /app
 
-# Configure pip to use a more reliable mirror
-RUN pip config set global.index-url https://pypi.org/simple && \
-    pip config set global.trusted-host pypi.org
+# Crear y activar entorno virtual
+RUN python -m venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
 
-# Copy requirements first to leverage Docker cache
-COPY app/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install numpy==1.24.3  # Fijamos la versión de numpy para compatibilidad
+# Copy and install Python dependencies
+COPY --chown=appuser:appuser app/requirements.txt ./
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    rm -rf /root/.cache/pip
 
 # Copy backend files
-COPY --chown=appuser:appuser app/ ./
+COPY --chown=appuser:appuser app/main.py ./
+COPY --chown=appuser:appuser app/test_transcribe_and_analyze.py ./
+COPY --chown=appuser:appuser app/database.py ./
+COPY --chown=appuser:appuser app/models/ ./models/
 
 # Create necessary directories with proper permissions
-RUN mkdir -p /app/uploads /app/analysis /app/static /app/cache && \
-    chown -R appuser:appuser /app/uploads /app/analysis /app/static /app/cache && \
-    chmod -R 750 /app/uploads /app/analysis /app/static /app/cache
-
-# Copy the built frontend
-COPY --from=frontend-builder --chown=appuser:appuser /frontend/dist/. /app/static/
+RUN mkdir -p /app/uploads /app/analysis /app/cache && \
+    chown -R appuser:appuser /app/uploads /app/analysis /app/cache && \
+    chmod -R 750 /app/uploads /app/analysis /app/cache
 
 # Configure volumes
 VOLUME ["/app/uploads", "/app/analysis", "/app/cache"]
@@ -66,8 +68,7 @@ ENV PYTHONUNBUFFERED=1 \
     DATABASE_URL=postgresql://postgres:postgres@db:5432/auditoria_ia \
     TRANSFORMERS_CACHE=/app/cache \
     HF_HOME=/app/cache \
-    HF_DATASETS_CACHE=/app/cache \
-    HOME=/app
+    HF_DATASETS_CACHE=/app/cache
 
 # Expose port
 EXPOSE ${PORT}
@@ -77,59 +78,7 @@ USER appuser
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/ || exit 1
+    CMD curl -f http://localhost:${PORT}/health || exit 1
 
 # Command to run the application
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-
-# Stage 3: Final image
-FROM python:3.10-slim
-
-WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ffmpeg \
-    curl \
-    libpq-dev \
-    gcc \
-    python3-dev \
-    git && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-# Configure pip to use a more reliable mirror
-RUN pip config set global.index-url https://pypi.org/simple && \
-    pip config set global.trusted-host pypi.org
-
-# Copy requirements and install dependencies
-COPY app/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install numpy==1.24.3  # Fijamos la versión de numpy para compatibilidad
-
-# Copy built frontend from frontend-builder
-COPY --from=frontend-builder /frontend/dist /app/static
-
-# Copy backend from backend-builder
-COPY --from=backend-builder /app /app
-COPY --from=backend-builder /etc/passwd /etc/passwd
-
-# Create necessary directories
-RUN mkdir -p /app/uploads /app/analysis /app/cache && \
-    chmod -R 750 /app/uploads /app/analysis /app/cache
-
-# Set environment variables
-ENV HOME=/app \
-    TRANSFORMERS_CACHE=/app/cache \
-    HF_HOME=/app/cache \
-    HF_DATASETS_CACHE=/app/cache
-
-# Use non-root user
-USER appuser
-
-# Expose port
-EXPOSE 8000
-
-# Run the application
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD uvicorn main:app --host 0.0.0.0 --port $PORT

@@ -2,7 +2,6 @@ from fastapi import FastAPI, UploadFile, File, Body, HTTPException, Depends
 from faster_whisper import WhisperModel
 from pydub import AudioSegment
 from transformers import pipeline
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import traceback
 import os
@@ -31,17 +30,12 @@ app.add_middleware(
 )
 
 # Configurar directorios
-STATIC_DIR = Path("/app/static")
 UPLOAD_DIR = Path("/app/uploads")
 ANALYSIS_DIR = Path("/app/analysis")
 
 # Crear directorios si no existen
-STATIC_DIR.mkdir(exist_ok=True)
 UPLOAD_DIR.mkdir(exist_ok=True)
 ANALYSIS_DIR.mkdir(exist_ok=True)
-
-# Montar archivos estáticos después de las rutas API
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
 
 # Modelos
 whisper = WhisperModel("small", device="cpu", compute_type="int8")
@@ -102,11 +96,8 @@ def validate_audio_file(file: UploadFile) -> bool:
         
     return True
 
-@app.post("/transcribe/")
-async def transcribe(
-    file: UploadFile = File(...),
-    current_user: Usuario = Depends(get_current_user)
-):
+@app.post("/api/transcribe/")
+async def transcribe(file: UploadFile = File(...)):
     try:
         if not validate_audio_file(file):
             raise HTTPException(status_code=400, detail="Tipo de archivo no soportado")
@@ -146,13 +137,8 @@ async def transcribe(
             raise e
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/analyze/")
-async def analyze(
-    text: str = Body(...),
-    filename: str = Body(None),
-    current_user: Usuario = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
+@app.post("/api/analyze/")
+async def analyze(text: str = Body(...), filename: str = Body(...)):
     try:
         if not text:
             raise HTTPException(status_code=400, detail="El texto no puede estar vacío")
@@ -238,41 +224,14 @@ async def analyze(
             }
         }
 
-        # Guardar grabación y análisis en la base de datos
-        if filename:
-            # Crear grabación
-            grabacion = Grabacion(
-                usuario_id=current_user.id,
-                nombre_archivo=filename,
-                ruta_archivo=str(UPLOAD_DIR / filename),
-                duracion=0,  # Se actualizará cuando se procese el audio
-                fecha_grabacion=datetime.now(),
-                estado="completado",
-                metadata={"transcription": text}
-            )
-            db.add(grabacion)
-            db.commit()
-            db.refresh(grabacion)
-
-            # Crear análisis
-            analisis = Analisis(
-                grabacion_id=grabacion.id,
-                tipo_analisis="completo",
-                resultado=analysis
-            )
-            db.add(analisis)
-            db.commit()
-
-            # Guardar también en archivo JSON
-            safe_filename = "".join(c for c in filename if c.isalnum() or c in "._- ")
-            output_filename = ANALYSIS_DIR / f"devolucion_{safe_filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            
-            with open(output_filename, "w", encoding="utf-8") as f:
-                json.dump(analysis, f, ensure_ascii=False, indent=4)
-            
-            return {"analysis": analysis, "saved_to": str(output_filename)}
+        # Guardar análisis en archivo JSON
+        safe_filename = "".join(c for c in filename if c.isalnum() or c in "._- ")
+        output_filename = ANALYSIS_DIR / f"devolucion_{safe_filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         
-        return {"analysis": analysis}
+        with open(output_filename, "w", encoding="utf-8") as f:
+            json.dump(analysis, f, ensure_ascii=False, indent=4)
+
+        return {"analysis": analysis, "saved_to": str(output_filename)}
 
     except Exception as e:
         print("❌ ERROR durante el análisis:")
@@ -281,16 +240,9 @@ async def analyze(
             raise e
         raise HTTPException(status_code=500, detail=str(e))
 
-# Servir el frontend
-@app.get("/{full_path:path}")
-async def serve_frontend(full_path: str):
-    static_dir = Path("static")
-    requested_path = static_dir / full_path
-    
-    if not requested_path.exists() or not requested_path.is_file():
-        return FileResponse(static_dir / "index.html")
-        
-    return FileResponse(requested_path)
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 # Endpoints de autenticación
 @app.post("/token")
