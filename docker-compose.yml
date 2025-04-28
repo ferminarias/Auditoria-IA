@@ -8,10 +8,9 @@ services:
     ports:
       - "8001:8000"
     volumes:
-      - ./uploads:/app/uploads
-      - ./analysis:/app/analysis
+      - ./:/app
     env_file:
-      - .env  
+      - .env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/auditoria_ia
     depends_on:
@@ -25,6 +24,7 @@ services:
       - POSTGRES_DB=auditoria_ia
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5433:5432"
 

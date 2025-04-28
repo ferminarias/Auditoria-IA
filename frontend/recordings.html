@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Grabaciones - Panel de Administración</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <h1 class="text-xl font-bold">Panel de Administración</h1>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <a href="index.html" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                        Inicio
+                    </a>
+                    <button onclick="logout()" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                        Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Stats Section -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-semibold text-gray-600">Total Grabaciones</h3>
+                <p class="text-3xl font-bold" id="totalRecordings">-</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-semibold text-gray-600">Última Analizada</h3>
+                <p class="text-xl font-medium" id="lastAnalyzed">-</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-semibold text-gray-600">Satisfacción Promedio</h3>
+                <p class="text-3xl font-bold" id="avgSatisfaction">-</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-semibold text-gray-600">Estado General</h3>
+                <p class="text-3xl font-bold" id="generalStatus">-</p>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="bg-white p-6 rounded-lg shadow mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Fecha Desde</label>
+                    <input type="date" id="dateFrom" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Fecha Hasta</label>
+                    <input type="date" id="dateTo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Estado</label>
+                    <select id="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="">Todos</option>
+                        <option value="PENDIENTE">Pendiente</option>
+                        <option value="PROCESANDO">Procesando</option>
+                        <option value="COMPLETADO">Completado</option>
+                        <option value="ERROR">Error</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-4">
+                <button onclick="applyFilters()" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
+                    Aplicar Filtros
+                </button>
+            </div>
+        </div>
+
+        <!-- Recordings Table -->
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Archivo</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duración</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="recordingsTable">
+                    <!-- Recordings will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal for Analysis -->
+    <div id="analysisModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center pb-3">
+                <h3 class="text-xl font-bold">Análisis de Grabación</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-500">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="modalContent" class="mt-4">
+                <!-- Analysis content will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check authentication
+        if (!localStorage.getItem('access_token')) {
+            window.location.href = '/login.html';
+        }
+
+        // Load initial data
+        loadStats();
+        loadRecordings();
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            window.location.href = '/login.html';
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/recordings/stats', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Error al cargar estadísticas');
+                
+                const stats = await response.json();
+                
+                document.getElementById('totalRecordings').textContent = stats.total;
+                document.getElementById('lastAnalyzed').textContent = stats.lastAnalyzed ? new Date(stats.lastAnalyzed).toLocaleDateString() : '-';
+                document.getElementById('avgSatisfaction').textContent = stats.avgSatisfaction.toFixed(1) + '%';
+                document.getElementById('generalStatus').textContent = stats.generalStatus;
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function loadRecordings() {
+            try {
+                const dateFrom = document.getElementById('dateFrom').value;
+                const dateTo = document.getElementById('dateTo').value;
+                const status = document.getElementById('status').value;
+                
+                let url = '/api/recordings?';
+                if (dateFrom) url += `date_from=${dateFrom}&`;
+                if (dateTo) url += `date_to=${dateTo}&`;
+                if (status) url += `status=${status}`;
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Error al cargar grabaciones');
+                
+                const recordings = await response.json();
+                const tableBody = document.getElementById('recordingsTable');
+                tableBody.innerHTML = '';
+                
+                recordings.forEach(recording => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${recording.nombre_archivo}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${new Date(recording.fecha_grabacion).toLocaleDateString()}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${formatDuration(recording.duracion)}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(recording.estado)}">
+                                ${recording.estado}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            ${recording.analysis ? 
+                                `<button onclick='showAnalysis(${JSON.stringify(recording)})' class="text-indigo-600 hover:text-indigo-900">Ver Análisis</button>` :
+                                '<span class="text-gray-400">Sin análisis</span>'
+                            }
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function formatDuration(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        function getStatusColor(status) {
+            const colors = {
+                'PENDIENTE': 'bg-yellow-100 text-yellow-800',
+                'PROCESANDO': 'bg-blue-100 text-blue-800',
+                'COMPLETADO': 'bg-green-100 text-green-800',
+                'ERROR': 'bg-red-100 text-red-800'
+            };
+            return colors[status] || 'bg-gray-100 text-gray-800';
+        }
+
+        function showAnalysis(recording) {
+            const modal = document.getElementById('analysisModal');
+            const content = document.getElementById('modalContent');
+            
+            const analysis = recording.analysis.detailed_analysis;
+            content.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold mb-2">Transcripción</h4>
+                        <p class="text-sm text-gray-600">${recording.transcription}</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold mb-2">Análisis de Emociones</h4>
+                        <p class="text-sm text-gray-600">
+                            <strong>Calidad de Interacción:</strong> ${analysis.emotion_analysis.interaction_quality}<br>
+                            <strong>Emociones Detectadas:</strong> ${analysis.emotion_analysis.emotions.join(', ')}<br>
+                            <strong>Satisfacción:</strong> ${(analysis.satisfaction * 20).toFixed(1)}%
+                        </p>
+                    </div>
+                </div>
+                <div class="mt-4 bg-gray-50 p-4 rounded-lg">
+                    <h4 class="font-semibold mb-2">Resumen</h4>
+                    <p class="text-sm text-gray-600">${analysis.summary}</p>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('analysisModal').classList.add('hidden');
+        }
+
+        function applyFilters() {
+            loadRecordings();
+        }
+    </script>
+</body>
+</html> 

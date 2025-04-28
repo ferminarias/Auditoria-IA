@@ -3,46 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Análisis de Llamadas</title>
+    <title>Login - Panel de Administración</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .login-container {
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .login-card {
-            backdrop-filter: blur(10px);
-            background-color: rgba(255, 255, 255, 0.9);
-        }
-    </style>
 </head>
-<body>
-    <div class="login-container flex items-center justify-center p-4">
-        <div class="login-card w-full max-w-md p-8 rounded-lg shadow-xl">
+<body class="bg-gray-100">
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
             <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold text-gray-800">
-                    <i class="fas fa-phone-alt mr-2"></i>
-                    Análisis de Llamadas
-                </h1>
+                <h1 class="text-3xl font-bold text-gray-900">Panel de Administración</h1>
                 <p class="text-gray-600 mt-2">Inicia sesión para continuar</p>
             </div>
 
             <form id="loginForm" class="space-y-6">
                 <div>
                     <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                    <div class="mt-1">
-                        <input type="email" id="email" name="email" required
-                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    </div>
+                    <input type="email" id="email" name="email" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
                 <div>
                     <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
-                    <div class="mt-1">
-                        <input type="password" id="password" name="password" required
-                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    </div>
+                    <input type="password" id="password" name="password" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
                 <div>
@@ -52,69 +34,34 @@
                     </button>
                 </div>
             </form>
-
-            <div class="mt-6 text-center">
-                <p class="text-sm text-gray-600">
-                    ¿No tienes una cuenta?
-                    <a href="#" id="showRegister" class="font-medium text-blue-600 hover:text-blue-500">
-                        Regístrate aquí
-                    </a>
-                </p>
-            </div>
         </div>
     </div>
 
-    <!-- Modal de Registro -->
-    <div id="registerModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
-                <div class="text-center mb-8">
-                    <h2 class="text-2xl font-bold text-gray-800">Registro</h2>
-                </div>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('username', document.getElementById('email').value);
+            formData.append('password', document.getElementById('password').value);
 
-                <form id="registerForm" class="space-y-6">
-                    <div>
-                        <label for="regName" class="block text-sm font-medium text-gray-700">Nombre</label>
-                        <input type="text" id="regName" name="name" required
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    </div>
+            try {
+                const response = await fetch('/token', {
+                    method: 'POST',
+                    body: formData
+                });
 
-                    <div>
-                        <label for="regEmail" class="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" id="regEmail" name="email" required
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    </div>
+                if (!response.ok) {
+                    throw new Error('Credenciales inválidas');
+                }
 
-                    <div>
-                        <label for="regPassword" class="block text-sm font-medium text-gray-700">Contraseña</label>
-                        <input type="password" id="regPassword" name="password" required
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-
-                    <div>
-                        <label for="regRole" class="block text-sm font-medium text-gray-700">Rol</label>
-                        <select id="regRole" name="role" required
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                            <option value="admin">Administrador</option>
-                            <option value="user">Usuario</option>
-                        </select>
-                    </div>
-
-                    <div class="flex justify-end space-x-4">
-                        <button type="button" id="closeRegister"
-                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
-                            Cancelar
-                        </button>
-                        <button type="submit"
-                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
-                            Registrarse
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <script src="auth.js"></script>
+                const data = await response.json();
+                localStorage.setItem('token', data.access_token);
+                window.location.href = '/admin/users.html';
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+    </script>
 </body>
 </html> 

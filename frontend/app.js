@@ -95,7 +95,7 @@ async function transcribeAudio(file) {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${API_URL}/api/transcribe/`, {
+    const response = await fetch(`${API_URL}/transcribe/`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${getToken()}`
@@ -112,7 +112,7 @@ async function transcribeAudio(file) {
 }
 
 async function analyzeText(text, filename) {
-    const response = await fetch(`${API_URL}/api/analyze/`, {
+    const response = await fetch(`${API_URL}/analyze/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -217,13 +217,40 @@ function downloadPDF() {
 
 // Funciones de utilidad
 function showLoading() {
-    // Implementar indicador de carga
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'loading';
+    loadingDiv.className = 'fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50';
+    loadingDiv.innerHTML = '<div class="bg-white p-4 rounded-lg">Procesando...</div>';
+    document.body.appendChild(loadingDiv);
 }
 
 function hideLoading() {
-    // Ocultar indicador de carga
+    const loadingDiv = document.getElementById('loading');
+    if (loadingDiv) {
+        loadingDiv.remove();
+    }
 }
 
 function showError(message) {
-    alert(message); // En producción, usar un sistema de notificaciones más elegante
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white p-4 rounded-lg shadow-lg z-50';
+    errorDiv.textContent = message;
+    document.body.appendChild(errorDiv);
+    setTimeout(() => errorDiv.remove(), 5000);
+}
+
+// Función de autenticación
+function getToken() {
+    return localStorage.getItem('token') || '';
+}
+
+function checkAuth() {
+    const token = getToken();
+    if (!token) {
+        window.location.href = 'login.html';
+    }
+}
+
+function removeToken() {
+    localStorage.removeItem('token');
 } 
