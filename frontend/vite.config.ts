@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { resolve } from 'path'
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -12,5 +12,15 @@ export default defineConfig({
         secure: false
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        index: resolve(__dirname, 'index.html'),
+        login: resolve(__dirname, 'login.html'),
+        recordings: resolve(__dirname, 'recordings.html'), // si la usás
+        // podés agregar más si hace falta
+      }
+    }
   }
-}) 
+})

@@ -114,7 +114,7 @@
 
     <script>
         // Check authentication
-        if (!localStorage.getItem('access_token')) {
+       if (!localStorage.getItem('token')) {
             window.location.href = '/login.html';
         }
 
@@ -131,7 +131,7 @@
             try {
                 const response = await fetch('/api/recordings/stats', {
                     headers: {
-                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
                     }
                 });
                 
@@ -161,7 +161,7 @@
                 
                 const response = await fetch(url, {
                     headers: {
-                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
                     }
                 });
                 

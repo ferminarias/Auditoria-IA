@@ -1,9 +1,3 @@
--- Crear la base de datos
-CREATE DATABASE auditoria_ia;
-
--- Conectarnos a la base de datos
-\c auditoria_ia
-
 -- Crear el esquema
 CREATE SCHEMA IF NOT EXISTS auditoria_ia;
 

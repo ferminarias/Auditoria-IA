@@ -14,7 +14,7 @@ class Grabacion(Base):
     duracion = Column(Integer)  # en segundos
     fecha_grabacion = Column(DateTime)
     estado = Column(String(50), default="pendiente")  # 'pendiente', 'procesando', 'completado', 'error'
-    metadata = Column(JSON)
+    metadatos = Column(JSON)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

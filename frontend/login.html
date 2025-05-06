@@ -37,31 +37,36 @@
         </div>
     </div>
 
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        try {
             const formData = new FormData();
-            formData.append('username', document.getElementById('email').value);
-            formData.append('password', document.getElementById('password').value);
+            formData.append('username', email);
+            formData.append('password', password);
 
-            try {
-                const response = await fetch('/token', {
-                    method: 'POST',
-                    body: formData
-                });
+            const response = await fetch('http://34.55.18.0:8000/token', {
+                method: 'POST',
+                body: formData
+            });
 
-                if (!response.ok) {
-                    throw new Error('Credenciales inválidas');
-                }
-
-                const data = await response.json();
-                localStorage.setItem('token', data.access_token);
-                window.location.href = '/admin/users.html';
-            } catch (error) {
-                alert(error.message);
+            if (!response.ok) {
+                throw new Error('Credenciales inválidas');
             }
-        });
-    </script>
+
+            const data = await response.json();
+            localStorage.setItem('token', data.access_token);
+            window.location.href = '/admin/users.html';
+        } catch (error) {
+            alert(error.message);
+        }
+    });
+</script>
+
+
 </body>
-</html> 
+</html>

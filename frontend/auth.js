@@ -1,5 +1,5 @@
 // Configuración
-const API_URL = 'http://localhost:8000';
+const API_URL = 'http://34.55.18.0:8000';
 
 // Elementos del DOM
 const loginForm = document.getElementById('loginForm');
@@ -36,17 +36,19 @@ function checkAuth() {
 // Manejar el login
 loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    const formData = new FormData();
-    formData.append('username', document.getElementById('email').value);
-    formData.append('password', document.getElementById('password').value);
+
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
 
     try {
-        const response = await fetch(`${API_URL}/token`, {
-            method: 'POST',
-            body: formData
-        });
+        const formData = new FormData();
+formData.append('username', email);
+formData.append('password', password);
 
+const response = await fetch(`${API_URL}/token`, {
+  method: 'POST',
+  body: formData
+});
         if (!response.ok) {
             throw new Error('Credenciales inválidas');
         }

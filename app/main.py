@@ -1,3 +1,4 @@
+from app.auth import get_current_user
 from fastapi import FastAPI, UploadFile, File, Body, HTTPException, Depends
 from faster_whisper import WhisperModel
 from pydub import AudioSegment
@@ -15,8 +16,10 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from app.database import get_db
+from database import get_db
 from app.models import Usuario, Grabacion, Analisis
+from typing import Optional
+
 
 app = FastAPI(title="FastAPI App")
 
@@ -44,9 +47,7 @@ summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
 emotion_analyzer = pipeline("text-classification", model="SamLowe/roberta-base-go_emotions")
 zero_shot_classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
 
-# Configuración de seguridad
-SECRET_KEY = "tu_clave_secreta_muy_segura"  # En producción, usar una clave segura
-ALGORITHM = "HS256"
+from app.auth import SECRET_KEY, ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -369,23 +370,6 @@ async def initialize_admin(db: Session = Depends(get_db)):
     return {"message": "Superusuario creado exitosamente"}
 
 # Middleware para verificar token
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    credentials_exception = HTTPException(
-        status_code=401,
-        detail="Credenciales inválidas",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    user = db.query(Usuario).filter(Usuario.email == email).first()
-    if user is None:
-        raise credentials_exception
-    return user
 
 # Proteger rutas que requieren autenticación
 @app.get("/users/me")
@@ -483,7 +467,7 @@ async def list_recordings(
             "duracion": rec.duracion,
             "fecha_grabacion": rec.fecha_grabacion,
             "estado": rec.estado,
-            "transcription": rec.metadata.get("transcription", ""),
+            "transcription": rec.metadatos.get("transcription", ""),
             "analysis": rec.analisis[0].resultado if rec.analisis else None
         }
         for rec in recordings
@@ -516,7 +500,7 @@ async def download_recording_analysis(
             "nombre": recording.nombre_archivo,
             "duracion": recording.duracion,
             "fecha": recording.fecha_grabacion.isoformat(),
-            "transcription": recording.metadata.get("transcription", "")
+            "transcription": recording.metadatos.get("transcription", "")
         },
         "analysis": analysis.resultado
     }
@@ -534,4 +518,9 @@ async def download_recording_analysis(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        upload_max_size=100 * 1024 * 1024  # 100 MB
+    )

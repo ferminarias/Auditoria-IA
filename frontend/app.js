@@ -17,9 +17,13 @@ let currentAnalysis = null;
 
 // Verificar autenticación al cargar la página
 document.addEventListener('DOMContentLoaded', () => {
-    checkAuth();
-    setupEventListeners();
+    // Solo correr esto si NO estamos en login.html
+    if (!window.location.pathname.includes('login.html')) {
+        checkAuth();
+        setupEventListeners();
+    }
 });
+
 
 // Configurar event listeners
 function setupEventListeners() {

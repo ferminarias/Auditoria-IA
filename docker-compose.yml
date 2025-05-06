@@ -6,13 +6,18 @@ services:
       context: .
       dockerfile: docker/Dockerfile
     ports:
-      - "8001:8000"
+      - "8000:8000"
     volumes:
-      - ./:/app
-    env_file:
-      - .env
+      - ./app:/app/app
+      - ./app/uploads:/app/uploads
+      - ./app/analysis:/app/analysis
+      - cache_volume:/app/cache
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/auditoria_ia
+      - PYTHONPATH=/app
+      - TRANSFORMERS_CACHE=/app/cache
+      - HF_HOME=/app/cache
+      - HF_DATASETS_CACHE=/app/cache
     depends_on:
       - db
 
@@ -30,3 +35,4 @@ services:
 
 volumes:
   postgres_data:
+  cache_volume:
