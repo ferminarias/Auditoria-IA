@@ -1,7 +1,8 @@
 import requests
+import json
 
 # Configuración
-API_BASE_URL = "http://127.0.0.1:8000"
+API_BASE_URL = "http://localhost:8000"
 TRANSCRIBE_URL = f"{API_BASE_URL}/transcribe/"
 ANALYZE_URL = f"{API_BASE_URL}/analyze/"
 

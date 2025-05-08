@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Panel de Administración</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100">
     <div class="min-h-screen flex items-center justify-center">
@@ -37,36 +38,7 @@
         </div>
     </div>
 
-<script>
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-
-        try {
-            const formData = new FormData();
-            formData.append('username', email);
-            formData.append('password', password);
-
-            const response = await fetch('http://34.55.18.0:8000/token', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error('Credenciales inválidas');
-            }
-
-            const data = await response.json();
-            localStorage.setItem('token', data.access_token);
-            window.location.href = '/admin/users.html';
-        } catch (error) {
-            alert(error.message);
-        }
-    });
-</script>
-
-
+    <script src="config.js"></script>
+    <script src="auth.js"></script>
 </body>
 </html>

@@ -19,70 +19,157 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.next/
+out/
+build/
+dist/
+coverage/
+
+# IDEs y editores
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Archivos de proyecto
+*.log
+logs/
+*.sqlite3
+*.db
+uploads/
+analysis/
+cache/
+*.mp3
+*.wav
+*.ogg
+*.m4a
+*.pdf
+*.csv
+*.xlsx
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!tailwind.config.js
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Documentación
+docs/_build/
+site/
+
+# Otros
+*.bak
+*.tmp
+*.temp
+.cache/
+.temp/
+.tmp/
+
+# Entornos virtuales
+venv/
+ENV/
+env/
+.env
+
+# Archivos de base de datos
+*.sqlite3
+*.db
+
+# Archivos de caché
+.cache/
+__pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
 
-# Entornos virtuales
-venv/
-env/
-ENV/
-.env
-.venv
-env.bak/
-venv.bak/
-
-# Archivos de entorno
-.env
-.env.local
-.env.*.local
-
-# Docker
-**/postgres-data/
-*.log
-.docker/
-
-# Editor
-.vscode/
-.idea/
-*.swp
-*.swo
-*.sublime-workspace
-*.sublime-project
-
 # Archivos de sistema
 .DS_Store
 Thumbs.db
-desktop.ini
 
 # Archivos de la aplicación
-uploads/
-analysis/
-node_modules/
-dist/
-build/
-*.mp3
-*.wav
-*.m4a
-*.ogg
-*.flac
-*.aac
-*.wma
-*.m4v
-*.mov
-*.avi
-*.mp4
-*.mkv
+/app/uploads/*
+/app/analysis/*
+/app/cache/*
+!app/uploads/.gitkeep
+!app/analysis/.gitkeep
+!app/cache/.gitkeep
 
-# Modelos de ML
-models/
-*.pt
-*.pth
-*.onnx
-*.bin
-*.h5
-*.hdf5
-*.tflite
-*.pb
-*.pkl
-*.joblib
+# Archivos de configuración local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Archivos de dependencias
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos de construcción
+/frontend/dist/
+/frontend/build/
+
+# Archivos temporales
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Archivos de Docker
+.docker/
+docker-compose.override.yml
+
+# Archivos de Redis
+dump.rdb
+*.rdb
+
+# Archivos de PostgreSQL
+*.sql
+!docker/init.sql
+
+# Archivos de Nginx
+*.pid
+*.conf
+!nginx.conf
+
+# Archivos de Supervisor
+*.pid
+*.sock

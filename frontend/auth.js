@@ -1,114 +1,140 @@
 // Configuración
-const API_URL = 'http://34.55.18.0:8000';
-
-// Elementos del DOM
-const loginForm = document.getElementById('loginForm');
-const registerForm = document.getElementById('registerForm');
-const showRegisterBtn = document.getElementById('showRegister');
-const closeRegisterBtn = document.getElementById('closeRegister');
-const registerModal = document.getElementById('registerModal');
+const API_URL = 'http://34.55.18.0:8000/api';
+const AUTH_URL = 'http://34.55.18.0:8000';
 
 // Funciones de utilidad
-function showError(message) {
-    alert(message); // En producción, usar un sistema de notificaciones más elegante
+function showError(message, duration = APP_CONFIG.ERROR_MESSAGE_DURATION) {
+    console.error('Error:', message);
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-message';
+    errorDiv.textContent = message;
+    document.body.appendChild(errorDiv);
+    
+    setTimeout(() => {
+        errorDiv.remove();
+    }, duration);
 }
 
 function setToken(token) {
+    if (!token) {
+        console.error('Intento de guardar token inválido');
+        return;
+    }
     localStorage.setItem('token', token);
 }
 
 function getToken() {
-    return localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.warn('No se encontró token en localStorage');
+    }
+    return token;
 }
 
 function removeToken() {
     localStorage.removeItem('token');
 }
 
+// Función para hacer peticiones autenticadas
+async function fetchWithAuth(url, options = {}) {
+    try {
+        const token = getToken();
+        if (!token) {
+            throw new Error('No hay token de autenticación');
+        }
+
+        const headers = {
+            ...options.headers,
+            'Authorization': `Bearer ${token}`
+        };
+        
+        const response = await fetch(url, {
+            ...options,
+            headers
+        });
+        
+        if (response.status === 401) {
+            removeToken();
+            window.location.href = APP_CONFIG.ROUTES.LOGIN;
+            throw new Error('Sesión expirada');
+        }
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || `Error en la petición: ${response.status}`);
+        }
+        
+        return response;
+    } catch (error) {
+        console.error('Error en fetchWithAuth:', error);
+        showError(error.message);
+        throw error;
+    }
+}
+
 // Verificar si el usuario está autenticado
 function checkAuth() {
     const token = getToken();
     if (!token) {
-        window.location.href = 'login.html';
+        console.warn('Redirigiendo a login por falta de autenticación');
+        window.location.href = APP_CONFIG.ROUTES.LOGIN;
     }
 }
 
 // Manejar el login
-loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+document.addEventListener('DOMContentLoaded', () => {
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
 
-    try {
-        const formData = new FormData();
-formData.append('username', email);
-formData.append('password', password);
+            if (!email || !password) {
+                showError('Por favor, completa todos los campos');
+                return;
+            }
 
-const response = await fetch(`${API_URL}/token`, {
-  method: 'POST',
-  body: formData
-});
-        if (!response.ok) {
-            throw new Error('Credenciales inválidas');
-        }
+            try {
+                const formData = new FormData();
+                formData.append('username', email);
+                formData.append('password', password);
 
-        const data = await response.json();
-        setToken(data.access_token);
-        window.location.href = 'index.html';
-    } catch (error) {
-        showError(error.message);
-    }
-});
+                const response = await fetch(`${AUTH_URL}/token`, {
+                    method: 'POST',
+                    body: formData
+                });
 
-// Manejar el registro
-registerForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const userData = {
-        email: document.getElementById('regEmail').value,
-        password: document.getElementById('regPassword').value,
-        nombre: document.getElementById('regName').value,
-        rol: document.getElementById('regRole').value
-    };
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || 'Credenciales inválidas');
+                }
 
-    try {
-        const response = await fetch(`${API_URL}/register`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(userData)
+                const data = await response.json();
+                if (!data.access_token) {
+                    throw new Error('No se recibió token de acceso');
+                }
+
+                setToken(data.access_token);
+                window.location.href = APP_CONFIG.ROUTES.HOME;
+            } catch (error) {
+                console.error('Error en login:', error);
+                showError(error.message);
+            }
         });
+    }
+});
 
-        if (!response.ok) {
-            throw new Error('Error en el registro');
-        }
-
-        alert('Registro exitoso. Por favor, inicia sesión.');
-        registerModal.classList.add('hidden');
-        registerForm.reset();
+async function loadStats() {
+    try {
+        const response = await fetchWithAuth(`${API_URL}/recordings/stats`);
+        if (!response.ok) throw new Error('Error al cargar estadísticas');
+        const data = await response.json();
+        return data;
     } catch (error) {
-        showError(error.message);
+        console.error('Error al cargar estadísticas:', error);
+        showError('No se pudieron cargar las estadísticas');
+        return null;
     }
-});
-
-// Mostrar modal de registro
-showRegisterBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    registerModal.classList.remove('hidden');
-});
-
-// Cerrar modal de registro
-closeRegisterBtn.addEventListener('click', () => {
-    registerModal.classList.add('hidden');
-    registerForm.reset();
-});
-
-// Cerrar modal al hacer clic fuera
-registerModal.addEventListener('click', (e) => {
-    if (e.target === registerModal) {
-        registerModal.classList.add('hidden');
-        registerForm.reset();
-    }
-}); 
+} 

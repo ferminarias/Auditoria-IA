@@ -4,11 +4,14 @@ Sistema de análisis de llamadas utilizando inteligencia artificial para transcr
 
 ## Requisitos
 
-- Docker y Docker Compose
 - Python 3.10+
-- Node.js 18+
+- PostgreSQL 13+
+- Redis (opcional)
+- Nginx
+- Supervisor
+- Certbot (para SSL)
 
-## Configuración
+## Instalación en VPS
 
 1. Clonar el repositorio:
 ```bash
@@ -16,18 +19,26 @@ git clone <url-del-repositorio>
 cd <nombre-del-repositorio>
 ```
 
-2. Configurar las variables de entorno necesarias en tu sistema.
-
-## Ejecución
-
-1. Construir y levantar los contenedores:
+2. Configurar las variables de entorno:
 ```bash
-docker-compose up --build
+cp .env.example .env
+# Editar .env con tus configuraciones
 ```
 
-2. Acceder a la aplicación:
-- Frontend: http://localhost:8000
-- API: http://localhost:8000/api
+3. Ejecutar el script de instalación:
+```bash
+chmod +x install.sh
+sudo ./install.sh
+```
+
+4. Configurar el dominio:
+- Editar el archivo `/etc/nginx/nginx.conf` con tu dominio
+- Ejecutar `certbot --nginx -d tudominio.com -d www.tudominio.com`
+
+5. Iniciar la aplicación:
+```bash
+sudo supervisorctl start auditoria_ia
+```
 
 ## Estructura del Proyecto
 
@@ -42,30 +53,71 @@ docker-compose up --build
 ├── analysis/              # Scripts y herramientas de análisis
 ├── uploads/               # Carpeta de archivos de audio
 ├── docker/                # Archivos de configuración de Docker
-├── fastapi-app/           # Carpeta para futuras expansiones
-├── docker-compose.yml     # Configuración de Docker Compose
+├── nginx.conf            # Configuración de Nginx
+├── install.sh            # Script de instalación
+├── start.sh              # Script de inicio
 └── README.md             # Este archivo
 ```
 
-## Desarrollo
+## Configuración
 
-### Backend (FastAPI)
+### Variables de Entorno
 
-```bash
-cd app
-python -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
+- `API_HOST`: Host de la API (default: 0.0.0.0)
+- `API_PORT`: Puerto de la API (default: 8000)
+- `API_WORKERS`: Número de workers (default: 4)
+- `SECRET_KEY`: Clave secreta para JWT
+- `DATABASE_URL`: URL de la base de datos
+- `CORS_ORIGINS`: Orígenes permitidos para CORS
+- `WHISPER_MODEL`: Modelo de Whisper a usar
+- `LOG_LEVEL`: Nivel de logging
+- `SMTP_*`: Configuración de email (opcional)
+- `REDIS_*`: Configuración de Redis (opcional)
 
-### Frontend (React)
+### Nginx
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+La configuración de Nginx incluye:
+- SSL/TLS
+- Compresión Gzip
+- Caché
+- Seguridad básica
+- Proxy inverso para la API
+- Servido de archivos estáticos
+
+### Supervisor
+
+Supervisor se usa para mantener la aplicación en ejecución y reiniciarla automáticamente si falla.
+
+## Mantenimiento
+
+### Logs
+
+Los logs se encuentran en:
+- `/var/log/auditoria_ia/access.log`
+- `/var/log/auditoria_ia/error.log`
+- `/var/log/auditoria_ia/supervisor.*.log`
+
+### Backup
+
+Se recomienda configurar backups automáticos de:
+- Base de datos PostgreSQL
+- Directorio `/app/uploads`
+- Directorio `/app/analysis`
+
+### Monitoreo
+
+La aplicación incluye endpoints de monitoreo:
+- `/health`: Health check básico
+- `/metrics`: Métricas Prometheus (si está habilitado)
+
+## Seguridad
+
+- SSL/TLS obligatorio
+- Headers de seguridad configurados
+- Autenticación JWT
+- Límites de tamaño de archivo
+- CORS configurado
+- Usuario no-root para la aplicación
 
 ## Contribución
 

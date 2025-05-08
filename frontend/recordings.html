@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mis Grabaciones - Panel de Administración</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100">
     <nav class="bg-white shadow-lg">
@@ -20,7 +21,7 @@
                     <a href="index.html" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                         Inicio
                     </a>
-                    <button onclick="logout()" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                    <button id="logoutBtn" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                         Cerrar Sesión
                     </button>
                 </div>
@@ -112,66 +113,93 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
+    <script src="auth.js"></script>
     <script>
         // Check authentication
-       if (!localStorage.getItem('token')) {
-            window.location.href = '/login.html';
-        }
-
+        checkAuth();
         // Load initial data
         loadStats();
         loadRecordings();
 
-        function logout() {
-            localStorage.removeItem('access_token');
-            window.location.href = '/login.html';
-        }
-
         async function loadStats() {
             try {
-                const response = await fetch('/api/recordings/stats', {
-                    headers: {
-                        'Authorization': 'Bearer ' + localStorage.getItem('token')
-                    }
-                });
+                showLoading('Cargando estadísticas...');
+                const response = await fetchWithAuth(`${API_URL}/recordings/stats`);
                 
-                if (!response.ok) throw new Error('Error al cargar estadísticas');
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || 'Error al cargar estadísticas');
+                }
                 
                 const stats = await response.json();
                 
-                document.getElementById('totalRecordings').textContent = stats.total;
+                // Validar datos requeridos
+                if (!stats) {
+                    throw new Error('No se recibieron estadísticas válidas');
+                }
+                
+                document.getElementById('totalRecordings').textContent = stats.total || '0';
                 document.getElementById('lastAnalyzed').textContent = stats.lastAnalyzed ? new Date(stats.lastAnalyzed).toLocaleDateString() : '-';
-                document.getElementById('avgSatisfaction').textContent = stats.avgSatisfaction.toFixed(1) + '%';
-                document.getElementById('generalStatus').textContent = stats.generalStatus;
+                document.getElementById('avgSatisfaction').textContent = (stats.avgSatisfaction || 0).toFixed(1) + '%';
+                document.getElementById('generalStatus').textContent = stats.generalStatus || 'No disponible';
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error al cargar estadísticas:', error);
+                showError('Error al cargar estadísticas. Por favor, intenta de nuevo.');
+            } finally {
+                hideLoading();
             }
         }
 
         async function loadRecordings() {
             try {
+                showLoading('Cargando grabaciones...');
                 const dateFrom = document.getElementById('dateFrom').value;
                 const dateTo = document.getElementById('dateTo').value;
                 const status = document.getElementById('status').value;
                 
-                let url = '/api/recordings?';
+                // Validar fechas
+                if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
+                    throw new Error('La fecha inicial no puede ser posterior a la fecha final');
+                }
+                
+                let url = `${API_URL}/recordings?`;
                 if (dateFrom) url += `date_from=${dateFrom}&`;
                 if (dateTo) url += `date_to=${dateTo}&`;
                 if (status) url += `status=${status}`;
                 
-                const response = await fetch(url, {
-                    headers: {
-                        'Authorization': 'Bearer ' + localStorage.getItem('token')
-                    }
-                });
+                const response = await fetchWithAuth(url);
                 
-                if (!response.ok) throw new Error('Error al cargar grabaciones');
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || 'Error al cargar grabaciones');
+                }
                 
                 const recordings = await response.json();
                 const tableBody = document.getElementById('recordingsTable');
                 tableBody.innerHTML = '';
                 
+                if (!Array.isArray(recordings)) {
+                    throw new Error('Formato de respuesta inválido');
+                }
+                
+                if (recordings.length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                                No se encontraron grabaciones
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
                 recordings.forEach(recording => {
+                    if (!recording.nombre_archivo || !recording.fecha_grabacion) {
+                        console.warn('Grabación con datos incompletos:', recording);
+                        return;
+                    }
+
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -181,11 +209,11 @@
                             <div class="text-sm text-gray-900">${new Date(recording.fecha_grabacion).toLocaleDateString()}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">${formatDuration(recording.duracion)}</div>
+                            <div class="text-sm text-gray-900">${formatDuration(recording.duracion || 0)}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(recording.estado)}">
-                                ${recording.estado}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(recording.estado || 'PENDIENTE')}">
+                                ${recording.estado || 'PENDIENTE'}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -198,61 +226,90 @@
                     tableBody.appendChild(row);
                 });
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error al cargar grabaciones:', error);
+                showError('Error al cargar grabaciones. Por favor, intenta de nuevo.');
+            } finally {
+                hideLoading();
             }
         }
 
         function formatDuration(seconds) {
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+            try {
+                if (typeof seconds !== 'number' || isNaN(seconds)) {
+                    return '0:00';
+                }
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = Math.floor(seconds % 60);
+                return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+            } catch (error) {
+                console.error('Error al formatear duración:', error);
+                return '0:00';
+            }
         }
 
         function getStatusColor(status) {
-            const colors = {
-                'PENDIENTE': 'bg-yellow-100 text-yellow-800',
-                'PROCESANDO': 'bg-blue-100 text-blue-800',
-                'COMPLETADO': 'bg-green-100 text-green-800',
-                'ERROR': 'bg-red-100 text-red-800'
-            };
-            return colors[status] || 'bg-gray-100 text-gray-800';
+            try {
+                const colors = {
+                    'PENDIENTE': 'bg-yellow-100 text-yellow-800',
+                    'PROCESANDO': 'bg-blue-100 text-blue-800',
+                    'COMPLETADO': 'bg-green-100 text-green-800',
+                    'ERROR': 'bg-red-100 text-red-800'
+                };
+                return colors[status] || 'bg-gray-100 text-gray-800';
+            } catch (error) {
+                console.error('Error al obtener color de estado:', error);
+                return 'bg-gray-100 text-gray-800';
+            }
         }
 
         function showAnalysis(recording) {
-            const modal = document.getElementById('analysisModal');
-            const content = document.getElementById('modalContent');
-            
-            const analysis = recording.analysis.detailed_analysis;
-            content.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h4 class="font-semibold mb-2">Transcripción</h4>
-                        <p class="text-sm text-gray-600">${recording.transcription}</p>
+            try {
+                if (!recording || !recording.analysis) {
+                    throw new Error('Datos de análisis no disponibles');
+                }
+
+                const modal = document.getElementById('analysisModal');
+                const content = document.getElementById('modalContent');
+                
+                content.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold">Resumen</h4>
+                            <p class="text-gray-600">${recording.analysis.summary || 'Sin resumen disponible'}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold">Satisfacción</h4>
+                            <p class="text-gray-600">${recording.analysis.detailed_analysis?.satisfaction || 'No disponible'}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold">Estado</h4>
+                            <p class="text-gray-600">${recording.analysis.detailed_analysis?.resolution_status || 'No disponible'}</p>
+                        </div>
                     </div>
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h4 class="font-semibold mb-2">Análisis de Emociones</h4>
-                        <p class="text-sm text-gray-600">
-                            <strong>Calidad de Interacción:</strong> ${analysis.emotion_analysis.interaction_quality}<br>
-                            <strong>Emociones Detectadas:</strong> ${analysis.emotion_analysis.emotions.join(', ')}<br>
-                            <strong>Satisfacción:</strong> ${(analysis.satisfaction * 20).toFixed(1)}%
-                        </p>
-                    </div>
-                </div>
-                <div class="mt-4 bg-gray-50 p-4 rounded-lg">
-                    <h4 class="font-semibold mb-2">Resumen</h4>
-                    <p class="text-sm text-gray-600">${analysis.summary}</p>
-                </div>
-            `;
-            
-            modal.classList.remove('hidden');
+                `;
+                
+                modal.classList.remove('hidden');
+            } catch (error) {
+                console.error('Error al mostrar análisis:', error);
+                showError('Error al mostrar el análisis: ' + error.message);
+            }
         }
 
         function closeModal() {
-            document.getElementById('analysisModal').classList.add('hidden');
+            try {
+                document.getElementById('analysisModal').classList.add('hidden');
+            } catch (error) {
+                console.error('Error al cerrar modal:', error);
+            }
         }
 
         function applyFilters() {
-            loadRecordings();
+            try {
+                loadRecordings();
+            } catch (error) {
+                console.error('Error al aplicar filtros:', error);
+                showError('Error al aplicar los filtros: ' + error.message);
+            }
         }
     </script>
 </body>
