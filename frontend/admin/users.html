@@ -113,7 +113,7 @@
         // Check authentication
         const token = localStorage.getItem('token');
         if (!token) {
-            window.location.href = '../src/login.html';
+            window.location.href = '../login.html';
         }
 
         // Fetch and display users
@@ -172,7 +172,7 @@
                 });
             } catch (error) {
                 if (error.message === 'No autorizado') {
-                    window.location.href = '../src/login.html';
+                    window.location.href = '../login.html';
                 } else {
                     alert(error.message);
                 }
@@ -230,7 +230,7 @@
         // Logout handling
         document.getElementById('logoutBtn').addEventListener('click', () => {
             localStorage.removeItem('token');
-            window.location.href = '../src/login.html';
+            window.location.href = '../login.html';
         });
 
         // Initial load
