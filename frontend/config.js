@@ -14,9 +14,9 @@ const APP_CONFIG = {
     
     // Rutas de la aplicación
     ROUTES: {
-        LOGIN: 'login.html',
-        HOME: 'index.html',
-        RECORDINGS: 'recordings.html'
+        LOGIN: './login.html',
+        HOME: './index.html',
+        RECORDINGS: './recordings.html'
     },
 
     // Configuración de entorno
