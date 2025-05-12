@@ -16,7 +16,7 @@ let isProcessing = false;
 // Verificar autenticación al cargar la página
 document.addEventListener('DOMContentLoaded', () => {
     // Solo correr esto si NO estamos en login.html
-    if (!window.location.pathname.includes('login.html')) {
+    if (!window.location.pathname.includes('./login.html')) {
         checkAuth();
         setupEventListeners();
     }
@@ -309,7 +309,7 @@ function getToken() {
 function checkAuth() {
     const token = getToken();
     if (!token) {
-        window.location.href = 'login.html';
+        window.location.href = './login.html';
     }
 }
 
