@@ -203,7 +203,7 @@
         // Check authentication
         const token = localStorage.getItem('token');
         if (!token) {
-            window.location.href = '/login.html';
+            window.location.href = '../login.html';
         }
 
         // Initialize charts
@@ -274,7 +274,7 @@
                 updateTable(recordings);
             } catch (error) {
                 if (error.message === 'No autorizado') {
-                    window.location.href = '/login.html';
+                    window.location.href = '../login.html';
                 } else {
                     alert(error.message);
                 }
